@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador de Senha Segura</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #1e293b;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            position: relative;
+            margin-bottom: 15px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background-color: #0f172a;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            border-color: #38bdf8;
+        }
+
+        #toggleBtn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        .strength-bar-container {
+            width: 100%;
+            height: 8px;
+            background-color: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .status-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background-color: #0f172a;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .status-info p {
+            margin: 0;
+            color: #cbd5e1;
+        }
+
+        .requirements {
+            list-style: none;
+        }
+
+        .requirements li {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            transition: color 0.3s;
+        }
+
+        .requirements li.valid {
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Verificador de Senha</h1>
+        <p>Descubra o nível de segurança e o tempo estimado de quebra.</p>
+
+        <div class="input-group">
+            <input type="password" id="passwordInput" placeholder="Digite sua senha aqui..." autocomplete="off">
+            <button type="button" id="toggleBtn">👁️</button>
+        </div>
+
+        <div class="strength-bar-container">
+            <div id="strengthBar" class="strength-bar"></div>
+        </div>
+
+        <div class="status-info">
+            <p>Força: <strong id="strengthText">Nenhuma</strong></p>
+            <p>Tempo para quebrar: <strong id="crackTime">Instantâneo</strong></p>
+        </div>
+
+        <ul class="requirements">
+            <li id="req-length">❌ Pelo menos 8 caracteres</li>
+            <li id="req-upper">❌ Pelo menos 1 letra maiúscula</li>
+            <li id="req-lower">❌ Pelo menos 1 letra minúscula</li>
+            <li id="req-number">❌ Pelo menos 1 número</li>
+            <li id="req-symbol">❌ Pelo menos 1 caractere especial (!@#$...)</li>
+        </ul>
+    </div>
+
+    <script>
+        const passwordInput = document.getElementById('passwordInput');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+        const crackTimeText = document.getElementById('crackTime');
+
+        const reqs = {
+            length: document.getElementById('req-length'),
+            upper: document.getElementById('req-upper'),
+            lower: document.getElementById('req-lower'),
+            number: document.getElementById('req-number'),
+            symbol: document.getElementById('req-symbol')
+        };
+
+        toggleBtn.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            toggleBtn.textContent = type === 'password' ? '👁️' : '🙈';
+        });
+
+        passwordInput.addEventListener('input', () => {
+            const password = passwordInput.value;
+            evaluatePassword(password);
+        });
+
+        function evaluatePassword(password) {
+            if (password.length === 0) {
+                resetUI();
+                return;
+            }
+
+            const hasLength = password.length >= 8;
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+            const hasSymbol = /[^A-Za-z0-9]/.test(password);
+
+            updateRequirementUI(reqs.length, hasLength, 'Pelo menos 8 caracteres');
+            updateRequirementUI(reqs.upper, hasUpper, 'Pelo menos 1 letra maiúscula');
+            updateRequirementUI(reqs.lower, hasLower, 'Pelo menos 1 letra minúscula');
+            updateRequirementUI(reqs.number, hasNumber, 'Pelo menos 1 número');
+            updateRequirementUI(reqs.symbol, hasSymbol, 'Pelo menos 1 caractere especial (!@#$...)');
+
+            let poolSize = 0;
+            if (hasLower) poolSize += 26;
+            if (hasUpper) poolSize += 26;
+            if (hasNumber) poolSize += 10;
+            if (hasSymbol) poolSize += 32;
+
+            const combinations = Math.pow(poolSize, password.length);
+            const guessesPerSecond = 1e10; 
+            const secondsToCrack = combinations / guessesPerSecond;
+
+            crackTimeText.textContent = formatTime(secondsToCrack);
+            updateStrengthMeter(secondsToCrack);
+        }
+
+        function updateRequirementUI(element, isValid, text) {
+            if (isValid) {
+                element.classList.add('valid');
+                element.textContent = `✅ ${text}`;
+            } else {
+                element.classList.remove('valid');
+                element.textContent = `❌ ${text}`;
+            }
+        }
+
+        function updateStrengthMeter(seconds) {
+            if (seconds < 60) {
+                strengthBar.style.width = '25%';
+                strengthBar.style.backgroundColor = '#ef4444';
+                strengthText.textContent = 'Muito Fraca';
+                strengthText.style.color = '#ef4444';
+            } else if (seconds < 86400 * 30) {
+                strengthBar.style.width = '50%';
+                strengthBar.style.backgroundColor = '#f59e0b';
+                strengthText.textContent = 'Fraca / Média';
+                strengthText.style.color = '#f59e0b';
+            } else if (seconds < 31536000 * 100) {
+                strengthBar.style.width = '75%';
+                strengthBar.style.backgroundColor = '#3b82f6';
+                strengthText.textContent = 'Boa';
+                strengthText.style.color = '#3b82f6';
+            } else {
+                strengthBar.style.width = '100%';
+                strengthBar.style.backgroundColor = '#22c55e';
+                strengthText.textContent = 'Muito Forte';
+                strengthText.style.color = '#22c55e';
+            }
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 1) return 'Instantâneo';
+            if (seconds < 60) return `${Math.round(seconds)} segundos`;
+            if (seconds < 3600) return `${Math.round(seconds / 60)} minutos`;
+            if (seconds < 86400) return `${Math.round(seconds / 3600)} horas`;
+            if (seconds < 31536000) return `${Math.round(seconds / 86400)} dias`;
+            
+            const years = seconds / 31536000;
+            if (years < 1000) return `${Math.round(years)} anos`;
+            if (years < 1e6) return `${Math.round(years / 1000)} mil anos`;
+            if (years < 1e9) return `${Math.round(years / 1e6)} milhões de anos`;
+            return 'Séculos / Inquebrável';
+        }
+
+        function resetUI() {
+            strengthBar.style.width = '0%';
+            strengthText.textContent = 'Nenhuma';
+            strengthText.style.color = '#f8fafc';
+            crackTimeText.textContent = 'Instantâneo';
+            
+            updateRequirementUI(reqs.length, false, 'Pelo menos 8 caracteres');
+            updateRequirementUI(reqs.upper, false, 'Pelo menos 1 letra maiúscula');
+            updateRequirementUI(reqs.lower, false, 'Pelo menos 1 letra minúscula');
+            updateRequirementUI(reqs.number, false, 'Pelo menos 1 número');
+            updateRequirementUI(reqs.symbol, false, 'Pelo menos 1 caractere especial (!@#$...)');
+        }
+    </script>
+</body>
+</html>
